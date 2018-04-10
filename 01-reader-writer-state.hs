@@ -15,6 +15,8 @@ import           System.Directory       (doesDirectoryExist,
                                          getDirectoryContents)
 import           System.FilePath        ((</>))
 
+import           Test.Hspec             (hspec, it, shouldBe)
+
 main ::IO ()
 main = do
   putStrLn "--- Normal ---"
@@ -37,6 +39,8 @@ main = do
   putStrLn "\n--- Using newtype ---"
   run (Config 2) (countEntriesM "a") >>= printer
   run (Config 99) (countEntriesM "a") >>= printer
+
+  tests
 
 
 
@@ -82,6 +86,7 @@ data DirectoryContent
   = ContentCount Int
   | NotDirectory
   | NotCalculated
+  deriving (Eq)
 
 instance Show DirectoryContent where
   show (ContentCount n) = show n
@@ -121,7 +126,7 @@ data Config = Config
 
 data Model = Model
   { stateDeepestReached :: Int
-  } deriving (Show)
+  } deriving (Eq, Show)
 
 type ProgramRS a = ReaderT Config (StateT Model IO) a
 
@@ -238,3 +243,18 @@ countEntriesM = go 0
             isDir <- liftIO $ doesDirectoryExist newPath
             when isDir $
               go (depth+1) newPath
+
+
+-- Tests
+
+tests :: IO ()
+tests = hspec $ do
+ it "they are equivalent" $ do
+   (a, _) <-    runRS  (Config 99) (countEntriesToDepthRS "a")
+   (_, b, _) <- runRWS (Config 99) (countEntriesToDepthRWS "a")
+   a `shouldBe` b
+
+ it "they are equivalent" $ do
+   b <- runRWS (Config 99) (countEntriesToDepthRWS "a")
+   c <- run    (Config 99) (countEntriesM "a")
+   b `shouldBe` c
