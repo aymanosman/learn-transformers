@@ -37,10 +37,10 @@ program = do
 
 -- Using Transformers
 
+type Prog = MaybeT IO
+
 run :: Prog a -> IO (Maybe a)
 run = runMaybeT
-
-type Prog = MaybeT IO
 
 promptT
     :: String
