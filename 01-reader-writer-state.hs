@@ -151,7 +151,7 @@ countEntriesToDepthRS = go 0
           when (depth >= deepest) $
             modify incrementDeepest
           contents <- liftIO $ listDirectory path
-          (dirs, _normal) <- liftIO $ partitionContents $ map (path </>) contents
+          (dirs, _normal) <- liftIO $ partitionM doesDirectoryExist $ map (path </>) contents
           rest <- mapM (go (depth+1)) dirs
           return $
             (path, ContentCount $ length contents)
@@ -160,6 +160,22 @@ countEntriesToDepthRS = go 0
 incrementDeepest :: Model -> Model
 incrementDeepest s =
   s {stateDeepestReached = stateDeepestReached s + 1}
+
+-- Probably a terrible implementation with space leaks and security
+-- vulnerabilities that cause your computer to publish private keys on the
+-- internet
+partitionM
+  :: Monad m
+  => (a -> m Bool)
+  -> [a]
+  -> m ([a], [a])
+partitionM _ [] = return ([], [])
+partitionM f (x:xs) = do
+  b <- f x
+  (as, bs) <- partitionM f xs
+  if b
+    then return $ (x:as, bs)
+    else return $ (as, x:bs)
 
 
 -- Using ReaderT, WriterT and StateT
